@@ -2,8 +2,141 @@
 	
 	var toString = Object.prototype.toString;
 	var slice = Array.prototype.slice;
+	var hasProp = Object.prototype.hasOwnProperty;
 	var	$ = {object : '[object Object]', array : '[object Array]', string : '[object String]', 
 			 number : '[object Number]', db    : 'DBDataset'};
+
+	if(Object.create !== 'function'){
+		Object.create = function(o){
+			function F(){}
+			F.prototype = o;
+			var o = new F();
+			F.prototype = null;
+			return o;
+		}
+	}
+
+	function Create(o, type){
+		switch(type){
+			case $.object:
+				function F(o){
+					for(var i in o){
+						hasProp(o, i) && (this[i] = o[i]);
+					}
+				}	
+				F.prototype = new ObjectUtils();
+				var o = new F();
+				F.prototype = null;
+				return o;
+			break;
+			case $.array:
+				function F(){
+					this.array = o;
+				}
+				F.prototype = new ArrayUtils();
+				var o = new F();
+				F.prototype = null;
+				return o;
+			break;
+		}	
+	}
+
+	function ArrayUtils(){
+
+		this.first = function(){
+			return slice.call(this, 0, 1);
+		}
+
+		this.last = function(){
+			return slice.call(this, this.length - 1, this.length);
+		}
+
+		this.unique = function(){
+			var seen = {};
+			for(var i in this){
+				!seen[this[i]] && (seen[this[i]] = true);
+			}
+			return new ObjectUtils.keys.call(seen);
+		}
+
+	}
+
+	function ObjectUtils(){
+
+		this.size = function(){
+			var c = 0;
+			for(var i in this){
+				hasProp.call(this, i) && ++c;
+			}
+			return c;
+		}
+
+		this.keys = function(){
+			var keys = [];
+			for(var i in this){
+				hasProp.call(this, i) && keys.push(i);
+			}
+			return keys;
+		}
+
+		this.values = function(){
+			var values = [];
+			for(var i in this){
+				hasProp.call(this, i) && values.push(this[i]);
+			}
+			return values;
+		}
+
+		this.hasKey = function(key){
+			for(var i in this){
+				if(hasProp.call(this, i) && key === i){
+					return true;
+				}
+			}
+			return false
+		}
+
+		this.hasValue = function(value){
+			for(var i in this){
+				if(hasProp.call(this, i) && value === this[i]){
+					return true;
+				}
+			}
+			return false;
+		}
+
+		this.empty = function(){
+			for(var i in this){
+				if(hasProp.call(this, i)){
+					return true;
+				}
+			}
+			return false;
+		}
+
+		this.toArray = function(){
+			var arr = [];
+			for(var i in this){
+				hasProp.call(this, i) && arr.push(this[i]);
+			}	
+		}
+
+		this.map = function(cb){
+			if(cb && typeof cb !== 'function'){
+				throw TypeError();
+			}
+			for(var i in this){
+				var value = cb(this[i], i)
+				typeof value !== 'undefined' && (this[i] = value);
+			}
+		}
+	}
+
+
+
+
+
+
 			 	
 	function Promise(error, data){
 		this.error = function(cb){
@@ -29,11 +162,22 @@
 	}
 
 
+
+	function Main(){
+
+		var obj = slice.call(arguments)[0]
+
+		Create(obj, typeof obj);
+
+	}
+
+
 	function $$(){
 
-		var _this = this;
 		var SessionID, Version;
 		Connector && (SessionID = Connector.SessionID, Version = Connector.Version);
+
+		Binder.call(this);
 
 
 		this.getSessionID = function(){
@@ -287,34 +431,20 @@
 		}		
 	}				
 	eval('that.' + String.fromCharCode(95) + ' = $$');
+
+	function Binder(){
+		for(var i in this){
+        	if(!this.hasOwnProperty(i) && toString.call(this[i]) === $.object){
+        		var sub = this[i];
+            	for(var j in sub){
+                	if(typeof sub[j] === 'function'){
+                    	sub[j] = sub[j].bind(this);
+                	}
+            		}    
+        			}
+    }	
+}
+
+
+
 }(this, Connector))
-
-
-function Foo(){
-    this.x = 10;
-    
-    
-    for(var i in this){
-        if(!this.hasOwnProperty(i) && Object.prototype.toString.call(this[i]) === '[object Object]'){
-            for(var j in this[i]){
-                if(typeof this[i][j] === 'function'){
-                    this[i][j] = this[i][j].bind(this);
-                }
-            }    
-        }
-    }
-
-}
-
-
-Foo.prototype.u = {
-    
-    getX : function(){
-        return this.x;
-    }
-    
-}
-
-
-var foo = new Foo();
-foo.u.getX()
