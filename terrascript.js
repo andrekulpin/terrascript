@@ -7,6 +7,8 @@
 	var	$ = {object : '[object Object]', array : '[object Array]', string : '[object String]', 
 			 number : '[object Number]', db    : 'DBDataset'};
 	
+	
+
 			 
 	var utils = {
 
@@ -32,6 +34,11 @@
 			else if(typeof t === 'function'){
 				//obj[]	
 			}			
+		},
+		
+		get : function(o){
+			var o = Services.GetNewItemByUSI(o);
+			return Main(o);
 		} 
 	}
 
@@ -144,6 +151,10 @@
 			},
 			getState : function(){
 				return this.db.State;
+			},
+			
+			isEmpty : function(){
+				return this.db.IsEmptyPage;
 			}	
 			
 		}
@@ -200,11 +211,13 @@
 							}
 							}						
 							}
-			this.open();				
+			this.open();
+			_.isEmpty.call(this);				
 		}
 		
 		this.findByID = function(ID){
 			this.find({ID : ID});
+			_.isEmpty.call(this);
 		}
 		
 		this.update = function(obj, error){
@@ -383,7 +396,7 @@
 				
 	utils.mixin(Main, utils);
 	     
-	that.__ = Main;					
+	that._ = Main;					
 	
 	function Binder(){
 		for(var i in this){
