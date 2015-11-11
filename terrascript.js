@@ -14,6 +14,20 @@
 				r.push(i);		
 			}
 			return r;	
+		},
+		noConflict : function(o){
+			typeof o === 'undefined' ? (that.o = Main) : (that[o] = Main);
+			delete that.__;                                               //correct
+		}, 
+		mixin : function(obj, t){
+			if(toString.call(t) === $.object){
+				for(var i in t){
+					typeof t[i] === 'function' && (obj[i] = t[i]);
+				}
+			} 
+			else if(typeof t === 'function'){
+				//obj[]	
+			}			
 		} 
 	}
 
@@ -39,7 +53,6 @@
 	function spUtils(){
 		
 		this.exec = function(){
-			debugger;
 			var args = slice.call(arguments);
 			if(args.length < 2){
 				var params = System.CreateObject('TSObjectLibrary.Parameters'),
@@ -628,9 +641,11 @@
 						
 		}		
 	}
-	that.__ = Main;				
-	eval('that.' + String.fromCharCode(95) + ' = $$');
-
+	
+	utils.mixin(Main, utils);
+	     
+	that.__ = Main;					
+	
 	function Binder(){
 		for(var i in this){
         	if(!this.hasOwnProperty(i) && toString.call(this[i]) === $.object){
