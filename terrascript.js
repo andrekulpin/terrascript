@@ -5,10 +5,8 @@
 	var hasProp = Object.prototype.hasOwnProperty;
 	var addParam = typeof AddParameterEx === 'function' ? AddParameterEx : function(){};
 	var	$ = {object : '[object Object]', array : '[object Array]', string : '[object String]', 
-			 number : '[object Number]', db    : 'DBDataset'};
-	
-	
-
+			 number : '[object Number]', bool : '[object Boolean]', db    : 'DBDataset', window : 'Window'};
+			 
 			 
 	var utils = {
 
@@ -20,56 +18,72 @@
 			return r;	
 		},
 		
+		isBool : function(o){
+			return toString.call(o) === $.bool; 	
+		},
+		
+		empty : function(o){
+			for(var i in o){
+				if(hasProp.call(o, i)){
+					return false;
+				}
+			}
+			return true;	
+		},
+		
 		noConflict : function(o){
-			typeof o === 'undefined' ? (that.o = Main) : (that[o] = Main);
-			delete that.__;                                               //correct
+			if(typeof o === 'string'){
+				throw new TypeError('Expected an object or a function.');
+			}
+			typeof o === 'undefined' ? (that.o = _) : (that[o] = _);
+			delete that._;                                               //correct
 		},
 		 
-		mixin : function(obj, t){
-			if(toString.call(t) === $.object){
-				for(var i in t){
-					typeof t[i] === 'function' && (obj[i] = t[i]);
-				}
-			} 
-			else if(typeof t === 'function'){
-				//obj[]	
+		mixin : function(obj){
+			var args = slice.call(arguments, 1);
+			for(var t in args){
+				var tt = args[t]
+				if(toString.call(tt) === $.object){
+					for(var i in tt){
+						if(typeof tt[i] === 'function' && this.empty(new tt[i]())){
+							obj[i] = tt[i];		
+						} else {
+							obj[i] = new tt[i]();	
+						}
+					}
+				} 
+				else if(typeof tt === 'function'){
+					obj[t] = new tt();
+				}	
 			}			
 		},
-		
+						
 		get : function(o){
-			var o = Services.GetNewItemByUSI(o);
-			return Main(o);
-		} 
-	}
+			try{
+				var o = typeof Services !== 'undefined' && 
+					Services.GetNewItemByUSI(o);	
+			} catch(err){
+				o = {};
+			}
+			return _(o);	
 
-	
-	function Main(){
-
-		var obj = slice.call(arguments)[0]
-
-		return Create(obj, toString.call(obj));
-
-	}
-	
-	function __construct(Prototype){
-		function F(){}
-		F.prototype = new Prototype();
-		var f = new  F();
-		F.prototype = null;
-		return f;
-	}
-	
-	
-	
-	function spUtils(){
+		},
 		
-		this.exec = function(){
-			var args = slice.call(arguments);
-			if(args.length < 2){
+		proc : function(){
+			
+			this.exec = function(){
+				var args = slice.call(arguments),
+					res = args.length >= 2 ? false : true;
 				var params = System.CreateObject('TSObjectLibrary.Parameters'),
-					sql = 'EXEC ' + this.name;
-					p = args[0],
-					keys = utils.keys(p);
+					sql = 'EXEC ' + (res ? this.name : args[0]), 
+					p = args[ res ? 0 : 1 ],
+					keys = utils.keys(p),
+					error;
+				for(var i in args){
+					if(utils.isBool(args[i])){
+						error = true;		
+					}
+				}
 				for(var i in keys){
 					var item = p[ keys[i] ],
 						out = item.output;
@@ -84,45 +98,120 @@
 				try{
 					Connector.DBEngine.ExecuteCustomSQL(sql.slice(0, sql.length - 1), params);	
 				} catch(err){
-					return new Promise(err.message);
+					if(error){
+						//return new Promise(err.message);
+						return err.message;	
+					} else {
+						return false;
+					}					
 				}
+				if(output){
+					var outParams = {};
 					for(var i in output){
 						var item = output[i];
-						this.output[item.Name] = item.Value;
+						outParams[item.Name] = item.Value;
 					}
-					return true;					
-					//return new Promise(null, output);
-
-					
-			}	
-		}
+					if(this.output){
+						this.output = outParams;
+						return true;
+					} else {
+						return outParams;
+					}	
+				} else {
+					return true;
+				}											
+			}				
+		},
 		
+		window : function(){
+		
+			this.show = function(){
+				var args = slice.call(arguments);
+				if(this.__construct){
+					for(var p in args){
+						this.window.Attributes(p) = args[p];
+					}
+					return this.window.Show();	
+				}
+				/*				
+				for(var p in args){
+					typeof args[p] !== $.object && (args[0].Attributes(p) = args[p]);
+				}
+				
+				 */
+//				typeof o === $.window && o.Show();								 					
+			}
+			
+			this.showModal = function(){
+				if(this.__construct){
+					return this.window.Show();	
+				}
+//				typeof o === $.window && o.ShowModal();					
+			}
+		
+		}
 	}
+	
+	function _(){
 
+		var obj = slice.call(arguments)[0]
+
+		return Create(obj, toString.call(obj));
+
+	}
+	
+	function __construct(Prototype){
+		function F(){}
+		F.prototype = new Prototype();
+		F.prototype.__construct = true;
+		var f = new F();
+		F.prototype = null;
+		return f;
+	}
+	
 	function Create(o, type){
 		switch(type){
 		
 			case $.string:
-			
+										
 				var isObj = /(sp|fn)|(.sp|.fn)/g.test(o);
 				if(isObj){
-					var obj = __construct(spUtils);
+					var obj = __construct(utils.proc);
 					obj.name = o;
 					obj.output = {};
 					return obj;			
+				} 
+				
+				var isWind = /(wnd)|(wnd_)/g.test(o);
+				if(isWind){
+					var obj = __construct(utils.window);
+			    	obj.window = o;
+			    	return obj;		
 				}
+				
+				return o;
 				
 			break;
 		
 			case $.object:
 				
-				if('ServiceTypeCode' in o && o.ServiceTypeCode === $.db){
-				
-					var obj = __construct(DBUtils);
-					obj.db = o;
-					return obj;
+				if('ServiceTypeCode' in o){
+					switch(o.ServiceTypeCode){
 					
-				}
+					    case $.db:
+					    	var obj = __construct(db);
+							obj.db = o;
+							return obj;
+					    break;
+					    
+					    case $.window:
+					    	var obj = __construct(utils.window);
+					    	obj.window = o;
+					    	return obj;					    	
+					    break;
+						
+					}
+				} 
 				
 				var obj = __construct(ObjectUtils);
 				for(var i in o){
@@ -142,7 +231,7 @@
 	}
 	
 	
-	function DBUtils(){
+	function db(){
 		
 		var _ = {
 			
@@ -394,20 +483,20 @@
 		}
 	}
 				
-	utils.mixin(Main, utils);
+	utils.mixin(_, utils);
 	     
-	that._ = Main;					
+	that._ = _;					
 	
 	function Binder(){
 		for(var i in this){
-        	if(!this.hasOwnProperty(i) && toString.call(this[i]) === $.object){
+        	if(!hasProp.call(this, i) && (toString.call(this[i]) === $.object)){
         		var sub = this[i];
             	for(var j in sub){
                 	if(typeof sub[j] === 'function'){
                     	sub[j] = sub[j].bind(this);
                 	}
-            		}    
-        			}
-    }	
-}
+            	}    
+        	}
+    	}	
+	}
 }(this))
