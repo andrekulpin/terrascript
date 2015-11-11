@@ -3,11 +3,34 @@
 	var toString = Object.prototype.toString;
 	var slice = Array.prototype.slice;
 	var hasProp = Object.prototype.hasOwnProperty;
+	
 	var addParam = typeof AddParameterEx === 'function' ? AddParameterEx : function(){};
-	var	$ = {object : '[object Object]', array : '[object Array]', string : '[object String]', 
-			 number : '[object Number]', bool : '[object Boolean]', db    : 'DBDataset', window : 'Window'};
+	
+	var $ = {
+		object : '[object Object]',
+		array : '[object Array]',
+		string : '[object String]', 
+		number : '[object Number]', 
+		bool : '[object Boolean]', 
+		db    : 'DBDataset', 
+		window : 'Window'
+	};
 			 
-			 
+	
+	function _(){
+		
+		if(this instanceof _){
+			return _();
+		}
+
+		var obj = slice.call(arguments)[0]
+
+		return Create(obj, toString.call(obj));
+
+	}
+	
+	_.version = 0.0.5;
+	
 	var utils = {
 
 		keys : function(o){
@@ -57,7 +80,7 @@
 			}			
 		},
 						
-		get : function(o){
+		getService : function(o){
 			try{
 				var o = typeof Services !== 'undefined' && 
 					Services.GetNewItemByUSI(o);	
@@ -149,14 +172,6 @@
 			}
 		
 		}
-	}
-	
-	function _(){
-
-		var obj = slice.call(arguments)[0]
-
-		return Create(obj, toString.call(obj));
-
 	}
 	
 	function __construct(Prototype){
