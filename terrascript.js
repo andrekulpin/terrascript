@@ -36,7 +36,6 @@
 				throw new TypeError('Expected an object or a function.');
 			}
 			typeof o === 'undefined' ? (that.o = _) : (that[o] = _);
-			delete that._;                                               //correct
 		},
 		 
 		mixin : function(obj){
