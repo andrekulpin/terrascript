@@ -5,6 +5,7 @@
 	var hasProp = Object.prototype.hasOwnProperty;
 	
 	var addParam = typeof AddParameterEx === 'function' ? AddParameterEx : function(){};
+	var getService = 
 	
 	var $ = {
 		object : '[object Object]',
@@ -31,7 +32,7 @@
 	
 	_.version = 0.0.5;
 	
-	var utils = {
+	var $$ = {
 
 		keys : function(o){
 			var r = [];
@@ -44,8 +45,23 @@
 		isBool : function(o){
 			return toString.call(o) === $.bool; 	
 		},
-		
-		empty : function(o){
+
+		isString : function(o){
+			return typeof o === 'string';
+		},
+
+		isNumber : function(o){
+			return typeof o === 'number';
+		},
+
+		isArray : function(o){
+			return toString.call(o) === $.array;
+		},
+
+		isEmpty : function(o){
+			if('length' in o && this.isArray(o) && o.length){
+				return false;
+			}
 			for(var i in o){
 				if(hasProp.call(o, i)){
 					return false;
@@ -55,7 +71,7 @@
 		},
 		
 		noConflict : function(o){
-			if(typeof o === 'string'){
+			if(typeof o !== 'number'){
 				throw new TypeError('Expected an object or a function.');
 			}
 			typeof o === 'undefined' ? (that.o = _) : (that[o] = _);
@@ -67,7 +83,7 @@
 				var tt = args[t]
 				if(toString.call(tt) === $.object){
 					for(var i in tt){
-						if(typeof tt[i] === 'function' && this.empty(new tt[i]())){
+						if(typeof tt[i] === 'function' && this.isEmpty(new tt[i]())){
 							obj[i] = tt[i];		
 						} else {
 							obj[i] = new tt[i]();	
@@ -87,8 +103,17 @@
 			} catch(err){
 				o = {};
 			}
+			if(!o){
+				throw new Error('The service doesn\'t seem to exist.');
+			}
 			return _(o);	
 
+		},
+
+		setProps : function(o, props){
+			for(var k in props){
+				o[k] = props[k];
+			}
 		},
 		
 		proc : function(){
@@ -99,10 +124,10 @@
 				var params = System.CreateObject('TSObjectLibrary.Parameters'),
 					sql = 'EXEC ' + (res ? this.name : args[0]), 
 					p = args[ res ? 0 : 1 ],
-					keys = utils.keys(p),
+					keys = $$.keys(p),
 					error;
 				for(var i in args){
-					if(utils.isBool(args[i])){
+					if($$.isBool(args[i])){
 						error = true;		
 					}
 				}
@@ -146,29 +171,72 @@
 		},
 		
 		window : function(){
+
+			this.prepare = function(){
+				var args = slice.call(arguments);
+				if(this.__construct){
+					this.window.Prepare();
+					return this;
+				}
+				(function(w){
+					w.Prepare();
+				}($$.getService(args[0])))
+			}
 		
 			this.show = function(){
 				var args = slice.call(arguments);
 				if(this.__construct){
-					for(var p in args){
-						this.window.Attributes(p) = args[p];
-					}
-					return this.window.Show();	
+					$$.setProps(this.window.Attributes, args);
+					this.window.Show();	
+					return this;
 				}
-				/*				
-				for(var p in args){
-					typeof args[p] !== $.object && (args[0].Attributes(p) = args[p]);
-				}
-				
-				 */
-//				typeof o === $.window && o.Show();								 					
+				(function(w){
+					$$.setProps(w.Attributes, args.slice(1));
+					w.Show();
+				}($$.getService(args[0])))							 					
 			}
 			
 			this.showModal = function(){
+				var args = slice.call(arguments);
 				if(this.__construct){
-					return this.window.Show();	
+					$$.setProps(this.window.Attributes, args);
+					this.window.ShowModal();
+					return this;	
 				}
-//				typeof o === $.window && o.ShowModal();					
+				(function(w){
+					$$.setProps(w.Attributes, args.slice(1));
+					w.ShowModal();
+				}($$.getService(args[0])))				
+			}
+
+			this.close = function(){
+				var args = slice.call(arguments);
+				if(this.__construct){
+					//modalresult
+					this.window.Close();
+					return this;
+				}
+				(function(w){
+					//modalresult
+					w.Close();
+				}($$.getService(args[0])))
+			}
+
+			this.notify = function(){
+				var args = slice.call(arguments);
+				if(this.__construct){
+					var notifyee = args[0],
+						message = args[1],
+						data = args[2];
+					this.window.notify(notifyee, message, data);
+					return this;
+				}
+				(function(w){
+					var notifyee = args[1],
+						message = args[2],
+						data = args[3];
+					w.notify()
+				}($$.getService(args[0])))
 			}
 		
 		}
@@ -190,7 +258,7 @@
 										
 				var isObj = /(sp|fn)|(.sp|.fn)/g.test(o);
 				if(isObj){
-					var obj = __construct(utils.proc);
+					var obj = __construct($$.proc);
 					obj.name = o;
 					obj.output = {};
 					return obj;			
@@ -198,7 +266,7 @@
 				
 				var isWind = /(wnd)|(wnd_)/g.test(o);
 				if(isWind){
-					var obj = __construct(utils.window);
+					var obj = __construct($$.window);
 			    	obj.window = o;
 			    	return obj;		
 				}
@@ -219,7 +287,7 @@
 					    break;
 					    
 					    case $.window:
-					    	var obj = __construct(utils.window);
+					    	var obj = __construct($$.window);
 					    	obj.window = o;
 					    	return obj;					    	
 					    break;
@@ -497,7 +565,7 @@
 		}
 	}
 				
-	utils.mixin(_, utils);
+	$$.mixin(_, $$);
 	     
 	that._ = _;					
 	
