@@ -5,7 +5,6 @@
 	var hasProp = Object.prototype.hasOwnProperty;
 	
 	var addParam = typeof AddParameterEx === 'function' ? AddParameterEx : function(){};
-	var getService = 
 	
 	var $ = {
 		object : '[object Object]',
@@ -30,9 +29,13 @@
 
 	}
 	
-	_.version = 0.0.5;
+	_.version = '0.0.5';
 	
 	var $$ = {
+	
+		getUser : function(){
+		 	return Connector.CurrentUser.ContactID;
+		},
 
 		keys : function(o){
 			var r = [];
@@ -40,6 +43,10 @@
 				r.push(i);		
 			}
 			return r;	
+		},
+
+		isUndefined : function(o){
+			return o === void 0;
 		},
 		
 		isBool : function(o){
@@ -59,7 +66,7 @@
 		},
 
 		isEmpty : function(o){
-			if('length' in o && this.isArray(o) && o.length){
+			if('length' in o && $$.isArray(o) && o.length){
 				return false;
 			}
 			for(var i in o){
@@ -83,10 +90,10 @@
 				var tt = args[t]
 				if(toString.call(tt) === $.object){
 					for(var i in tt){
-						if(typeof tt[i] === 'function' && this.isEmpty(new tt[i]())){
-							obj[i] = tt[i];		
+						if(typeof tt[i] === 'function' && isConstructor( tt[i] )){
+							obj[i] = new tt[i]();		
 						} else {
-							obj[i] = new tt[i]();	
+							obj[i] = tt[i];	
 						}
 					}
 				} 
@@ -110,10 +117,55 @@
 
 		},
 
-		setProps : function(o, props){
+		setAttributes : function(o, props){
 			for(var k in props){
-				o[k] = props[k];
+				o(k) = props[k];
 			}
+		},
+		
+		all : function(o, cond){
+			for(var i in o){
+				if(hasProp.call(o, i) && o[i] !== cond){
+					return false;
+				}	
+			}
+			return true;		
+		},
+		
+		any : function(o, cond){
+			for(var i in o){
+				if(hasProp.call(o, i) && o[i] === cond){
+					return true
+				}
+			}
+			return false;
+		},
+		
+		findProp : function(o, cond){
+			if(typeof cond === 'function'){
+				for(var i in o){
+					if(hasProp.call(o, i) && cond(o[i])){
+						return o[i]
+					}
+				}
+			} else {			
+				for(var i in o){
+					if(hasProp.call(o, i) && o[i] === cond){
+						return o[i];
+					}
+				}
+			}	
+			return void 0;	
+		},
+		
+		findProps : function(){
+			var arr = [];
+			for(var i in o){
+				if(hasProp.call(o, i) && o[i] === cond){
+					arr.push(o[i]);
+				}
+			}
+			return arr;
 		},
 		
 		proc : function(){
@@ -175,10 +227,12 @@
 			this.prepare = function(){
 				var args = slice.call(arguments);
 				if(this.__construct){
+					$$.setAttributes(this.window.Attributes, args);
 					this.window.Prepare();
 					return this;
 				}
 				(function(w){
+					$$.setAttributes(this.window.Attributes, args.slice(1));
 					w.Prepare();
 				}($$.getService(args[0])))
 			}
@@ -186,12 +240,10 @@
 			this.show = function(){
 				var args = slice.call(arguments);
 				if(this.__construct){
-					$$.setProps(this.window.Attributes, args);
 					this.window.Show();	
 					return this;
 				}
 				(function(w){
-					$$.setProps(w.Attributes, args.slice(1));
 					w.Show();
 				}($$.getService(args[0])))							 					
 			}
@@ -199,12 +251,10 @@
 			this.showModal = function(){
 				var args = slice.call(arguments);
 				if(this.__construct){
-					$$.setProps(this.window.Attributes, args);
 					this.window.ShowModal();
 					return this;	
 				}
 				(function(w){
-					$$.setProps(w.Attributes, args.slice(1));
 					w.ShowModal();
 				}($$.getService(args[0])))				
 			}
@@ -237,8 +287,7 @@
 						data = args[3];
 					w.notify()
 				}($$.getService(args[0])))
-			}
-		
+			}		
 		}
 	}
 	
@@ -333,6 +382,7 @@
 		this.refresh = function(){
 			this.db.Close();
 			this.db.Open();
+			return this;
 		}
 		
 		this.get = function(field){
@@ -345,18 +395,22 @@
 		
 		this.last = function(){
 			this.db.GotoLast();
+			return this;
 		}
 		
 		this.first = function(){
 			this.db.GotoFirst();
+			return this;
 		}
 		
 		this.close = function(){
 			this.db.Close();
+			return this;
 		}
 		
 		this.open = function(){
 			this.db.Open();
+			return this;
 		}
 		
 		this.isOpen = function(){
@@ -365,35 +419,47 @@
 		
 		this.find = function(o){
 			this.close();
-			var sq = this.db.SelectQuery;
-			for(var param in o){
-				var c = sq.Count;
-				while(c){
-					if(sq.Items(--c).Filters.FilterType === ftFilters){
-						var filters = sq.Items(c).Filters,
-							fc = filters.Count;
-						while(fc){
-							var f = filters.Items(--fc);
-							if(f.Code === param){
-								f.IsEnabled = true;
-								sq.Parameters.ItemsByName(param).Value = o[param];	
+			var args = slice.call(arguments, 1);
+			var sq = this.db.SelectQuery,
+				error = $$.findProp(args, function(n){ return $$.isBool(n);});
+			try{
+				for(var param in o){
+					var c = sq.Count;
+					while(c){
+						if(sq.Items(--c).Filters.FilterType === ftFilters){
+							var filters = sq.Items(c).Filters,
+								fc = filters.Count;
+							while(fc){
+								var f = filters.Items(--fc);
+								if(f.Code === param){
+									f.IsEnabled = true;
+									sq.Parameters.ItemsByName(param).Value = o[param];	
+								}	
 							}	
-							}	
-							}
-							}						
-							}
-			this.open();
-			_.isEmpty.call(this);				
+						}
+					}						
+				}
+			} catch(err){
+				if(error){
+					return err.message;
+				}
+				return false;
+			}
+			//_.isEmpty.call(this);
+			return this;				
 		}
 		
 		this.findByID = function(ID){
 			this.find({ID : ID});
 			_.isEmpty.call(this);
+			return this;
 		}
 		
-		this.update = function(obj, error){
-			!!!this.isOpen() && this.open();			
-			var params = System.CreateObject('TSObjectLibrary.Parameters'),
+		this.update = function(obj){
+			!!!this.isOpen() && this.open();
+			var args = slice.call(arguments, 1),
+				error = $$.findProp(args, function(n){ return $$.isBool(n);}),			
+				params = System.CreateObject('TSObjectLibrary.Parameters'),
 				UniqueIdentifier = this.getField('ID').FieldType, 
 				where = ' where ',
 				sql = 'update ' + _.getTable.call(this) + ' set ';
@@ -408,16 +474,20 @@
 			try{
 				Connector.DBEngine.ExecuteCustomSQL(sql + where, params);	
 			} catch(err){
+				if(error){
+					return err.message;
+				}
 				return false;
 			}
 			this.refresh();
-			return true;						
+			return this;						
 		}
 		
 		
 		
-		this.findAndUpdate = function(o, obj, error){
+		this.findAndUpdate = function(o, obj){
 			!!!this.isOpen() && this.open();
+			var error = $$.findProp(o, function(n){ return $$.isBool(n);});
 			var params = System.CreateObject('TSObjectLibrary.Parameters'),
 				sql = 'update ' + _.getTable.call(this) + ' set ',
 				where = ' where ';
@@ -443,7 +513,7 @@
 				}						
 			}
 			this.refresh();
-			return true;		
+			return this;		
 		}		
 	}
 	
@@ -563,6 +633,15 @@
 				return this;
 			}			
 		}
+	}
+	
+	function isConstructor(fn){
+		var str = '';
+		str += fn;
+		if(str.indexOf('this.') !== -1){
+			return true;
+		}
+		return false;	
 	}
 				
 	$$.mixin(_, $$);
