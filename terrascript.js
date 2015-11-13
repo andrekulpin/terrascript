@@ -15,6 +15,12 @@
 		db    : 'DBDataset', 
 		window : 'Window'
 	};
+
+	var fieldTypes = {
+
+
+
+	}
 			 
 	
 	function _(){
@@ -40,9 +46,21 @@
 		keys : function(o){
 			var r = [];
 			for(var i in o){
-				r.push(i);		
+				hasProp.call(o, i) && r.push(i);		
 			}
 			return r;	
+		},
+
+		values : function(o){
+			var r = [];
+			for(var i in o){
+				hasProp.call(o, i) && r.push(o[i]);
+			}
+			return r;
+		},
+
+		isObject : function(o){
+			return toString.call(o) === $.object;
 		},
 
 		isUndefined : function(o){
@@ -177,11 +195,10 @@
 					sql = 'EXEC ' + (res ? this.name : args[0]), 
 					p = args[ res ? 0 : 1 ],
 					keys = $$.keys(p),
-					error;
-				for(var i in args){
-					if($$.isBool(args[i])){
-						error = true;		
-					}
+					error,
+					argsIter = iterator(args);
+				if(argsIter(function(v){ return $$.isBool(v)}) ){
+					error = true
 				}
 				for(var i in keys){
 					var item = p[ keys[i] ],
@@ -301,6 +318,7 @@
 	}
 	
 	function Create(o, type){
+
 		switch(type){
 		
 			case $.string:
@@ -360,9 +378,28 @@
 			break;
 		}	
 	}
+
+	function property(p){
+		return function(o){
+			return o ? hasProp.call(o, p) : false;
+		}
+	}
+
+	function iterator(o){
+		var l = o.length, 
+			count = function(n){var k = 0;return function()
+			{k ^= 1;return n-- ? k ? n++ : n : void 0;}}, 
+			c = count(l);
+		return function fn(cb){
+			o[c()] ? cb(o[c()]) && fn(cb) : true;
+		}
+	}	
 	
-	
-	function db(){
+	function db(dataset){
+
+		var db = dataset;
+
+		var dbState = dataset.State;  //correction
 		
 		var _ = {
 			
@@ -370,7 +407,7 @@
 				return this.db.SelectQuery.Items(0).FromTable.SQLName;		
 			},
 			getState : function(){
-				return this.db.State;
+				return dbState;
 			},
 			
 			isEmpty : function(){
@@ -378,43 +415,93 @@
 			}	
 			
 		}
+
+		this.post = function(){
+
+			var state = dbState;
+
+			db.Post();
+			switch(state){
+
+			}
+
+		}
+
+		this.set = function(o){
+
+			if($$.isObject(o)){
+				var keys = $$.keys(o),
+					values = $$.values(o), 
+					iterKeys = iterator(keys),
+					iterValues = iterator(values);
+
+				if(iterKeys(ck) && iterValues(cv)){
+
+					iterKeys(function(v){
+						var fieldValue = this.getField(v).Value;
+						if(fieldValue !== o[v]){
+							this.getField(v).Value = o[v];	
+						}
+					})
+				}
+
+				function ck(value){
+					return this.getField(value);
+				}
+
+				function cv(value){
+					return typeof value !== 'undefined' 
+					&& this.get();
+				}
+
+			} else {
+				throw new TypeError('An object was expected.');
+			}
+
+			return this;
+		}
+
+		this.setAndPost = function(o){
+			this.set(o) && this.post();
+			return this;
+		}
 		
 		this.refresh = function(){
-			this.db.Close();
-			this.db.Open();
+			db.Close();
+			db.Open();
 			return this;
 		}
 		
 		this.get = function(field){
-			return this.db.DataFields(field).Value;
+			return db.DataFields(field).Value;
 		}
 		
 		this.getField = function(field){
-			return this.db.DataFields(field);	
+			return db.DataFields(field);	
 		}
 		
 		this.last = function(){
-			this.db.GotoLast();
+			db.GotoLast();
 			return this;
 		}
 		
 		this.first = function(){
-			this.db.GotoFirst();
+			db.GotoFirst();
 			return this;
 		}
 		
 		this.close = function(){
-			this.db.Close();
+			db.Close();
 			return this;
 		}
 		
 		this.open = function(){
-			this.db.Open();
+			db.Open();
 			return this;
 		}
 		
 		this.isOpen = function(){
-			return this.db.State === dstBrowse;
+			return db.State === dstBrowse;
 		}
 		
 		this.find = function(o){
