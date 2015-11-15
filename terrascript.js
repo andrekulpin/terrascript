@@ -1,9 +1,9 @@
-(function(that){
+(function(that, undefined){
 	
 	var toString = Object.prototype.toString;
 	var slice = Array.prototype.slice;
 	var hasProp = Object.prototype.hasOwnProperty;
-	var ¯_(ツ)_/¯ = '';
+	//var ¯_(ツ)_/¯ = '';
 	
 	var addParam = typeof AddParameterEx === 'function' ? AddParameterEx : function(){};
 	
@@ -769,4 +769,4 @@
         	}
     	}	
 	}
-}(this))
+}(this, O_o))
