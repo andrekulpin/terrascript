@@ -733,7 +733,14 @@
 				
 	$$.mixin(_, $$);
 	     
-	that._ = _;					
+	that._ = _;
+	
+	function debounce(fn, n){
+    	var c = 0;
+    	return function(){
+        	c < n && !fn() && !++c^n && setTimeout(function(){c = 0}, 1000);
+    	}
+	}
 	
 	function Binder(){
 		for(var i in this){
