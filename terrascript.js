@@ -742,6 +742,20 @@
     	}
 	}
 	
+	function combination(arr){
+    		'use strict';
+    		var L = 1 << arr.length, R = [];
+		return function(n){
+        		for(; --L ;){
+            			var l = arr.filter((v, k)=>{return L >> k & 1;});
+            			if(s.reduce((x,y)=>{ return x + y }) === n){
+                			R.push(l);    
+            			}
+        		}
+        	return R;    
+    		}
+	}
+	
 	function Binder(){
 		for(var i in this){
         	if(!hasProp.call(this, i) && (toString.call(this[i]) === $.object)){
