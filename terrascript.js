@@ -1,4 +1,4 @@
-(function(that, undefined){
+(function(that, O_o){
 	
 	var toString = Object.prototype.toString;
 	var slice = Array.prototype.slice;
@@ -769,4 +769,4 @@
         	}
     	}	
 	}
-}(this, O_o))
+}(this))
