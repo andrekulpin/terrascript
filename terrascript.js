@@ -3,7 +3,7 @@
 	var toString = Object.prototype.toString;
 	var slice = Array.prototype.slice;
 	var hasProp = Object.prototype.hasOwnProperty;
-	//var ¯_(ツ)_/¯ = '';
+	//var ¯\_(ツ)_/¯ = '';
 	
 	var addParam = typeof AddParameterEx === 'function' ? AddParameterEx : function(){};
 	
@@ -16,14 +16,31 @@
 		db    : 'DBDataset', 
 		window : 'Window'
 	};
+	
+	var states = {
+		closed : 0x0, 
+		browse : 0x1,
+		edit   : 0x2,
+		insert : 0x3,
+		calc   : 0x4
+	}
 
 	var fieldTypes = {
 
 
 
 	}
-			 
-	
+
+	function wrapper(fn, args){
+
+		var args = slice.call(arguments, 1);
+
+		return function(){
+			return fn.apply(this, args);
+		}
+
+	}
+			 	
 	function _(){
 		
 		if(this instanceof _){
@@ -349,7 +366,7 @@
 					switch(o.ServiceTypeCode){
 					
 					    case $.db:
-					    	var obj = __construct(db);
+					    	var obj = __construct(wrapper(db, o));
 							obj.db = o;
 							return obj;
 					    break;
@@ -394,6 +411,10 @@
 		return function fn(cb){
 			o[c()] ? cb(o[c()]) && fn(cb) : true;
 		}
+	}
+	
+	function Iterator(){
+	
 	}	
 	
 	function db(dataset){
@@ -416,19 +437,35 @@
 			}	
 			
 		}
-
+		
 		this.post = function(){
 
 			var state = dbState;
 
-			db.Post();
-			switch(state){
 
+			db.Post();
+			
+			
+			switch(state){
+            	
+				case states.browse:
+					
+					db.Edit();
+					
+				break;
+				
+				case states.edit:
+				
+					
+				break;		
+						
 			}
 
 		}
 
 		this.set = function(o){
+
+			var _this = this;
 
 			if($$.isObject(o)){
 				var keys = $$.keys(o),
@@ -447,12 +484,12 @@
 				}
 
 				function ck(value){
-					return this.getField(value);
+					return _this.getField(value);
 				}
 
 				function cv(value){
 					return typeof value !== 'undefined' 
-					&& this.get();
+					&& _this.get();
 				}
 
 			} else {
@@ -471,6 +508,10 @@
 			db.Close();
 			db.Open();
 			return this;
+		}
+		
+		this.getState = function(){
+			return db.State;
 		}
 		
 		this.get = function(field){
@@ -735,6 +776,7 @@
 	$$.mixin(_, $$);
 	     
 	that._ = _;
+	/*
 	
 	function debounce(fn, n){
     	var c = 0;
@@ -756,6 +798,7 @@
         	return R;    
     		}
 	}
+	*/
 	
 	function Binder(){
 		for(var i in this){
@@ -770,3 +813,4 @@
     	}	
 	}
 }(this))
+
