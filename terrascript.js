@@ -27,8 +27,8 @@
 	}	
 
 	var fieldTypes = {
-    	'[object String]' : 0x0,
-    	'[object Number]' : 0x1,
+    		'[object String]' : 0x0,
+    		'[object Number]' : 0x1,
 		'[object Number]' : 0x2,
 		'[object Boolean]': 0x3,
 		'[object Date]'   : 0x4			
