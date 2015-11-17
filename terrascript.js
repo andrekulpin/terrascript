@@ -1,3 +1,4 @@
+
 (function(that, O_o){
 	
 	var toString = Object.prototype.toString;
@@ -8,27 +9,38 @@
 	var addParam = typeof AddParameterEx === 'function' ? AddParameterEx : function(){};
 	
 	var $ = {
-		object : '[object Object]',
-		array : '[object Array]',
-		string : '[object String]', 
-		number : '[object Number]', 
-		bool : '[object Boolean]', 
-		db    : 'DBDataset', 
-		window : 'Window'
+		object            : '[object Object]',
+		array             : '[object Array]',
+		string            : '[object String]', 
+		number            : '[object Number]', 
+		bool              : '[object Boolean]',
+		date              : '[object Date]', 
+		db                : 'DBDataset', 
+		window            : 'Window'
 	};
 	
-	var states = {
-		closed : 0x0, 
-		browse : 0x1,
-		edit   : 0x2,
-		insert : 0x3,
-		calc   : 0x4
-	}
+	var valueTypes = {	
+		0x0               : 'dftString',
+		0x1               : 'dftInteger',
+		0x2               : 'dftFloat',
+		0x3               : 'dftBool',
+		0x4               : 'dftDateTime'	
+	}	
 
 	var fieldTypes = {
-
-
-
+    	'[object String]' : 0x0,
+    	'[object Number]' : 0x1,
+		'[object Number]' : 0x2,
+		'[object Boolean]': 0x3,
+		'[object Date]'   : 0x4			
+	}
+	
+	var states = {
+		closed            : 0x0, 
+		browse            : 0x1,
+		edit              : 0x2,
+		insert            : 0x3,
+		calc              : 0x4
 	}
 
 	function wrapper(fn, args){
@@ -405,11 +417,16 @@
 
 	function iterator(o){
 		var l = o.length, 
-			count = function(n){var k = 0;return function()
-			{k ^= 1;return n-- ? k ? n++ : n : void 0;}}, 
+			count = function(n){
+				var k = 0;
+				return function(){
+					k ^= 1;
+					return n-- ? k ? n++ : n : O_o;
+				}
+			}, 
 			c = count(l);
 		return function fn(cb){
-			o[c()] ? cb(o[c()]) && fn(cb) : true;
+			return o[c()] ? cb(o[c()]) && fn(cb) : true;
 		}
 	}
 	
@@ -419,10 +436,13 @@
 	
 	function db(dataset){
 
+    	// Private link to the TerraSoft dataset object
 		var db = dataset;
-
-		var dbState = dataset.State;  //correction
 		
+        // Private link to the TerraSoft dataset object state
+		var dbState = dataset.State;
+		
+		//Private functions for inner use
 		var _ = {
 			
 			getTable : function(){
@@ -438,32 +458,52 @@
 			
 		}
 		
+		/*		
+			Dataset post function.
+			Description: Posts changes to the database and then toggles the dataset state back to the current one
+			Example: _.getService('ds_Clients').post()
+			@return {self}					
+		*/
+		
 		this.post = function(){
 
 			var state = dbState;
 
-
 			db.Post();
-			
-			
+						
 			switch(state){
             	
 				case states.browse:
 					
 					db.Edit();
+					return this;
 					
 				break;
 				
 				case states.edit:
 				
+					db.Edit();
+					return this;
 					
 				break;		
-						
+										
 			}
-
+			return this;
 		}
+		
+		/*		
+			Dataset set function.
+			Description: Sets a new value to the current dataset record field
+			Example: _.getService('ds_Clients').set({ContactPhone : '85555555555', Address : '1 Red square'})
+			@param {object}
+			@return {self}					
+		*/
 
 		this.set = function(o){
+
+        	if(_.isEmpty()){
+        		throw Error('Dataset is empty.');
+        	}
 
 			var _this = this;
 
@@ -484,20 +524,35 @@
 				}
 
 				function ck(value){
-					return _this.getField(value);
+					return !!_this.getField(value);
 				}
 
 				function cv(value){
-					return typeof value !== 'undefined' 
-					&& _this.get();
+					for(var i in o){
+						if(o[i] === value){
+							var t = _this.getField(i).FieldType;
+							if(value !== O_o && t === fieldTypes[toString.call(value)]){
+								return 1;	
+							} else {
+								throw new Error('Wrong value type:\nField: ' + i + '\nExpected value type: ' + valueTypes[t]);
+							}							
+						}
+					}
 				}
-
 			} else {
 				throw new TypeError('An object was expected.');
 			}
 
 			return this;
 		}
+		
+		/*		
+			Dataset set and post function.
+			Description: Sets a new value to the current dataset record field and then immediately posts it to the database
+			Example: _.getService('ds_Clients').setAndPost({ContactPhone : '85555555555', Address : '1 Red square'})
+			@param {object}
+			@return {self}					
+		*/
 
 		this.setAndPost = function(o){
 			this.set(o) && this.post();
@@ -513,6 +568,13 @@
 		this.getState = function(){
 			return db.State;
 		}
+		
+		/*		
+			Dataset get function.
+			Description: Get the field value of the current record
+			Example: _('ds_Clients').get('ID')
+			@return {FieldValue}					
+		*/
 		
 		this.get = function(field){
 			return db.DataFields(field).Value;
@@ -542,9 +604,24 @@
 			return this;
 		}
 		
+		/*		
+			Dataset isOpen function.
+			Description: Checks if dataset if open
+			Example: _('ds_Clients').isOpen()
+			@return {boolean}					
+		*/
+				
 		this.isOpen = function(){
 			return db.State === dstBrowse;
 		}
+		
+		/*		
+			Dataset find function.
+			Description: Finds a record that meets the search condition
+			Example: _.getService('ds_Clients').find({Name : 'Муромец', ContactPhone : '83333333333'})
+			@param {object}
+			@return {self}					
+		*/
 		
 		this.find = function(o){
 			this.close();
@@ -569,20 +646,30 @@
 					}						
 				}
 			} catch(err){
-				if(error){
-					return err.message;
-				}
-				return false;
+				throw new Error(err.message);
 			}
-			//_.isEmpty.call(this);
 			return this;				
 		}
 		
+		/*		
+			Dataset find by ID function.
+			Description: Finds a record by ID 
+			Example: _.getService('ds_Clients').find('{FCC50225-B42A-454D-AED9-A3B6E9335007}')
+			@param {string}
+			@return {self}					
+		*/
+		
 		this.findByID = function(ID){
 			this.find({ID : ID});
-			_.isEmpty.call(this);
 			return this;
 		}
+		
+		/*		
+			Dataset update function. 
+			Example: _.getService('ds_Clients').open().update({Name : 'Mark'})
+			@param {object}
+			@return {self}					
+		*/
 		
 		this.update = function(obj){
 			!!!this.isOpen() && this.open();
@@ -612,8 +699,14 @@
 			return this;						
 		}
 		
-		
-		
+		/*		
+			Dataset find and update function. 
+			Example: _.getService('ds_Clients').open().findAndUpdate({ID : '{FCC50225-B42A-454D-AED9-A3B6E9335007}'}, {{Name : 'Mark'}})
+			@param1 {object}
+			@param2 {object}
+			@return {self}					
+		*/
+				
 		this.findAndUpdate = function(o, obj){
 			!!!this.isOpen() && this.open();
 			var error = $$.findProp(o, function(n){ return $$.isBool(n);});
