@@ -1,4 +1,3 @@
-
 (function(that, O_o){
 	
 	var toString = Object.prototype.toString;
