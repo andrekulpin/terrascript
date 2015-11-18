@@ -1,4 +1,4 @@
-(function(that, O_o){
+function(that, O_o){
 	
 	var toString = Object.prototype.toString;
 	var slice = Array.prototype.slice;
@@ -334,6 +334,82 @@
 					w.notify()
 				}($$.getService(args[0])))
 			}		
+		},
+		
+		genGUID : function(){
+			(Connector.GenGUID || (function(){
+				
+				
+
+function GenGUID(){
+    
+    var key = +new Date(),
+        hash = 0,
+        i = 5,
+        H = [];
+
+    
+    while(i--){
+        hash += key;
+        hash += hash << 10;
+        hash ^= hash >> 6;
+        hash += hash << 3;
+        hash ^= hash >> 11;
+        hash += hash << 15;
+        H.push(Math.abs(hash).toString(16))
+    }
+    
+    var H = H.map(it(H)).join('-')
+    
+    
+    function it(H){
+        var c = 5,
+            k = '',
+            n;
+        return function(v){
+            switch(c--){
+            
+                case 5:
+                    
+                    k = v.slice(0, 8),
+                    n = k.length;
+                    
+                    if(n < 8){
+                        
+                        return k + H[1].slice(0, H[1].length - n);
+                    }
+                        
+                break;
+                
+                case 4:
+                case 3:
+                case 2:
+                    
+                    k = v.slice(8 - n, 4);
+                    
+                    return k;
+                    
+                break;
+                
+                case 1:
+                    return v.slice(0, 8);    
+                break;
+                
+            
+            }
+            
+            return     
+        }
+        
+    }
+    
+    return H
+    
+}
+
+
+					
+			}()))();	
 		}
 	}
 	
@@ -429,7 +505,7 @@
 		}
 	}
 	
-	function Iterator(){
+	function Iterator(o){
 	
 	}	
 	
@@ -469,25 +545,19 @@
 			var state = dbState;
 
 			db.Post();
-						
-			switch(state){
-            	
-				case states.browse:
-					
-					db.Edit();
-					return this;
-					
-				break;
-				
-				case states.edit:
-				
-					db.Edit();
-					return this;
-					
-				break;		
-										
+			try{			
+				switch(state){            	
+					case states.browse:					
+						db.Edit();					
+					break;				
+					case states.edit:				
+						db.Edit();					
+					break;												
+				}
+				return this;
+			} finally {
+				return this;
 			}
-			return this;
 		}
 		
 		/*		
@@ -738,26 +808,6 @@
 		}		
 	}
 	
-	function ArrayUtils(){
-
-		this.first = function(){
-			return slice.call(this, 0, 1);
-		}
-
-		this.last = function(){
-			return slice.call(this, this.length - 1, this.length);
-		}
-
-		this.unique = function(){
-			var seen = {};
-			for(var i in this){
-				!seen[this[i]] && (seen[this[i]] = true);
-			}
-			return new ObjectUtils.keys.call(seen);
-		}
-
-	}
-
 	function ObjectUtils(){
 
 		this.size = function(){
@@ -905,4 +955,5 @@
     	}	
 	}
 }(this))
+
 
