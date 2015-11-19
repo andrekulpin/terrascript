@@ -80,6 +80,14 @@ function(that, O_o){
 			return r;	
 		},
 
+		size : function(o){
+			if(this.isArray(o)){
+				return o.length;
+			}
+			var keys = this.keys(o);
+			return keys.length;
+		},
+
 		values : function(o){
 			var r = [];
 			for(var i in o){
@@ -93,7 +101,7 @@ function(that, O_o){
 		},
 
 		isUndefined : function(o){
-			return o === void 0;
+			return typeof o === 'undefined' || o === O_o;
 		},
 		
 		isBool : function(o){
@@ -123,12 +131,16 @@ function(that, O_o){
 			}
 			return true;	
 		},
+
+		isNull : function(o){
+			return o === null;
+		},
 		
 		noConflict : function(o){
-			if(typeof o !== 'number'){
-				throw new TypeError('Expected an object or a function.');
+			if(this.isNumber(o)){
+				throw new TypeError('Expected an object or a string.');
 			}
-			typeof o === 'undefined' ? (that.o = _) : (that[o] = _);
+			!this.isUndefined(o) ? (that.o = _) : (that[o] = _);
 		},
 		 
 		mixin : function(obj){
@@ -152,16 +164,17 @@ function(that, O_o){
 						
 		getService : function(o){
 			try{
-				var o = typeof Services !== 'undefined' && 
-					Services.GetNewItemByUSI(o);	
+				var o = !this.isUndefined(Services) && 
+						!this.isNull(Services) &&
+						Services.GetNewItemByUSI(o);	
 			} catch(err){
 				o = {};
+			} finally {
+				if(!o){
+					throw new Error('The service doesn\'t seem to exist.');
+				}
+				return _(o);		
 			}
-			if(!o){
-				throw new Error('The service doesn\'t seem to exist.');
-			}
-			return _(o);	
-
 		},
 
 		setAttributes : function(o, props){
@@ -337,78 +350,49 @@ function(that, O_o){
 		},
 		
 		genGUID : function(){
-			(Connector.GenGUID || (function(){
-				
-				
+			(Connector.GenGUID || 
+			(function(){
+				var key = +new Date(),
+        			hash = 0,
+        			i = 5,
+        			H = [];	
+    			while(i--){
+        			hash += key;
+        			hash += hash << 10;
+        			hash ^= hash >> 6;
+        			hash += hash << 3;
+        			hash ^= hash >> 11;
+        			hash += hash << 15;
+        			H.push(Math.abs(hash).toString(16))
+    			}
+				var H = H.map(it(H)).join('-');
+				function it(H){
+        			var c = 5,
+            			k = '',
+            			n;
+        			return function(v){
+            			switch(c--){           
+                			case 5:                   
+                    			k = v.slice(0, 8),
+                    			n = k.length;                    
+                    			if(n < 8){                       
+                        			return k + H[1].slice(0, H[1].length - n);
+                    			}                       
+                			break;              
+                			case 4:
+                			case 3:
+                			case 2:                  
+                    			k = v.slice(8 - n, 4);                   
+                    			return k;                   
+                			break;               
+                			case 1:
+                    			return v.slice(0, 8);    
+                			break;
 
-function GenGUID(){
-    
-    var key = +new Date(),
-        hash = 0,
-        i = 5,
-        H = [];
-
-    
-    while(i--){
-        hash += key;
-        hash += hash << 10;
-        hash ^= hash >> 6;
-        hash += hash << 3;
-        hash ^= hash >> 11;
-        hash += hash << 15;
-        H.push(Math.abs(hash).toString(16))
-    }
-    
-    var H = H.map(it(H)).join('-')
-    
-    
-    function it(H){
-        var c = 5,
-            k = '',
-            n;
-        return function(v){
-            switch(c--){
-            
-                case 5:
-                    
-                    k = v.slice(0, 8),
-                    n = k.length;
-                    
-                    if(n < 8){
-                        
-                        return k + H[1].slice(0, H[1].length - n);
-                    }
-                        
-                break;
-                
-                case 4:
-                case 3:
-                case 2:
-                    
-                    k = v.slice(8 - n, 4);
-                    
-                    return k;
-                    
-                break;
-                
-                case 1:
-                    return v.slice(0, 8);    
-                break;
-                
-            
-            }
-            
-            return     
-        }
-        
-    }
-    
-    return H
-    
-}
-
-
-					
+                		}         
+            		}              
+        		}
+        		return H;
 			}()))();	
 		}
 	}
@@ -467,7 +451,7 @@ function GenGUID(){
 					}
 				} 
 				
-				var obj = __construct(ObjectUtils);
+				var obj = __construct();
 				for(var i in o){
 					hasProp.call(o, i) && (obj[i] = o[i]);
 				}
@@ -476,7 +460,7 @@ function GenGUID(){
 			break;
 			case $.array:
 			
-				var obj = __construct(ArrayUtils);
+				var obj = __construct();
 				obj.array = o;
 				return obj;
 
@@ -807,82 +791,7 @@ function GenGUID(){
 			return this;		
 		}		
 	}
-	
-	function ObjectUtils(){
-
-		this.size = function(){
-			var c = 0;
-			for(var i in this){
-				hasProp.call(this, i) && ++c;
-			}
-			return c;
-		}
-
-		this.keys = function(){
-			var keys = [];
-			for(var i in this){
-				hasProp.call(this, i) && keys.push(i);
-			}
-			return keys;
-		}
-
-		this.values = function(){
-			var values = [];
-			for(var i in this){
-				hasProp.call(this, i) && values.push(this[i]);
-			}
-			return values;
-		}
-
-		this.hasKey = function(key){
-			for(var i in this){
-				if(hasProp.call(this, i) && key === i){
-					return true;
-				}
-			}
-			return false
-		}
-
-		this.hasValue = function(value){
-			for(var i in this){
-				if(hasProp.call(this, i) && value === this[i]){
-					return true;
-				}
-			}
-			return false;
-		}
-
-		this.empty = function(){
-			for(var i in this){
-				if(hasProp.call(this, i)){
-					return false;
-				}
-			}
-			return true;
-		}
-
-		this.toArray = function(){
-			var arr = [];
-			for(var i in this){
-				hasProp.call(this, i) && arr.push(this[i]);
-			}
-			return arr;	
-		}
-
-		this.map = function(cb){
-			if(cb && typeof cb !== 'function'){
-				throw TypeError();
-			}
-			for(var i in this){
-				if(hasProp.call(this, i)){
-					var value = cb(this[i], i)
-					typeof value !== 'undefined' && (this[i] = value);
-				}
-			}
-			return this;
-		}
-	}
-			 	
+				 	
 	function Promise(error, data){
 		this.error = function(cb){
 			if(error){
@@ -941,19 +850,6 @@ function GenGUID(){
     		}
 	}
 	*/
-	
-	function Binder(){
-		for(var i in this){
-        	if(!hasProp.call(this, i) && (toString.call(this[i]) === $.object)){
-        		var sub = this[i];
-            	for(var j in sub){
-                	if(typeof sub[j] === 'function'){
-                    	sub[j] = sub[j].bind(this);
-                	}
-            	}    
-        	}
-    	}	
-	}
 }(this))
 
 
