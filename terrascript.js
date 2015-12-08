@@ -1,5 +1,7 @@
 function(that, O_o){
 	
+	//Internal variables
+
 	var toString = Object.prototype.toString;
 	var slice = Array.prototype.slice;
 	var hasProp = Object.prototype.hasOwnProperty;
@@ -27,8 +29,8 @@ function(that, O_o){
 	}	
 
 	var fieldTypes = {
-    		'[object String]' : 0x0,
-    		'[object Number]' : 0x1,
+    	'[object String]' : 0x0,
+    	'[object Number]' : 0x1,
 		'[object Number]' : 0x2,
 		'[object Boolean]': 0x3,
 		'[object Date]'   : 0x4			
@@ -42,16 +44,48 @@ function(that, O_o){
 		calc              : 0x4
 	}
 
+	//Internal functions
+
 	function wrapper(fn, args){
-
 		var args = slice.call(arguments, 1);
-
 		return function(){
 			return fn.apply(this, args);
 		}
-
 	}
-			 	
+
+	function __construct(Prototype){
+		function F(){}
+		F.prototype = new Prototype();
+		F.prototype.__construct = true;
+		var f = new F();
+		F.prototype = null;
+		return f;
+	}
+
+	function iterator(o){
+		var l = o.length, 
+			count = function(n){
+				var k = 0;
+				return function(){
+					k ^= 1;
+					return n-- ? k ? n++ : n : O_o;
+				}
+			}, 
+			c = count(l);
+		return function fn(cb){
+			return o[c()] ? cb(o[c()]) && fn(cb) : true;
+		}
+	}
+
+	function isConstructor(fn){
+		var str = '';
+		str += fn;
+		if(str.indexOf('this.') !== -1){
+			return true;
+		}
+		return false;	
+	}
+	 	
 	function _(){
 		
 		if(this instanceof _){
@@ -397,14 +431,7 @@ function(that, O_o){
 		}
 	}
 	
-	function __construct(Prototype){
-		function F(){}
-		F.prototype = new Prototype();
-		F.prototype.__construct = true;
-		var f = new F();
-		F.prototype = null;
-		return f;
-	}
+
 	
 	function Create(o, type){
 
@@ -467,32 +494,7 @@ function(that, O_o){
 			break;
 		}	
 	}
-
-	function property(p){
-		return function(o){
-			return o ? hasProp.call(o, p) : false;
-		}
-	}
-
-	function iterator(o){
-		var l = o.length, 
-			count = function(n){
-				var k = 0;
-				return function(){
-					k ^= 1;
-					return n-- ? k ? n++ : n : O_o;
-				}
-			}, 
-			c = count(l);
-		return function fn(cb){
-			return o[c()] ? cb(o[c()]) && fn(cb) : true;
-		}
-	}
-	
-	function Iterator(o){
-	
-	}	
-	
+		
 	function db(dataset){
 
     	// Private link to the TerraSoft dataset object
@@ -791,7 +793,7 @@ function(that, O_o){
 			return this;		
 		}		
 	}
-				 	
+	/*			 	
 	function Promise(error, data){
 		this.error = function(cb){
 			if(error){
@@ -814,42 +816,12 @@ function(that, O_o){
 			}			
 		}
 	}
-	
-	function isConstructor(fn){
-		var str = '';
-		str += fn;
-		if(str.indexOf('this.') !== -1){
-			return true;
-		}
-		return false;	
-	}
-				
+	*/
+					
 	$$.mixin(_, $$);
 	     
 	that._ = _;
-	/*
-	
-	function debounce(fn, n){
-    	var c = 0;
-    	return function(){
-        	c < n && !fn() && !++c^n && setTimeout(function(){c = 0}, 1000);
-    	}
-	}
-	
-	function combination(arr){
-    		'use strict';
-    		var L = 1 << arr.length, R = [];
-		return function(n){
-        		for(; --L ;){
-            			var l = arr.filter((v, k)=>{return L >> k & 1;});
-            			if(s.reduce((x,y)=>{ return x + y }) === n){
-                			R.push(l);    
-            			}
-        		}
-        	return R;    
-    		}
-	}
-	*/
+
 }(this))
 
 
